@@ -2,14 +2,17 @@ require_relative 'base'
 require_relative 'customer_vault'
 
 module NmiDirectPost
-  class TransactionNotFoundError < StandardError; end
+  class TransactionNotFoundError < StandardError;
+  end
 
-  class TransactionNotSavedError < StandardError; end
+  class TransactionNotSavedError < StandardError;
+  end
 
-  class Transaction  < Base
+  class Transaction < Base
     SAFE_PARAMS = [:customer_vault_id, :type, :amount]
 
     attr_reader *SAFE_PARAMS
+    attr_reader *MERCHANT_DEFINED_FIELDS
     attr_reader :auth_code, :avs_response, :cvv_response, :order_id, :type, :dup_seconds, :condition
     attr_reader :transaction_id
 
@@ -26,6 +29,7 @@ module NmiDirectPost
 
     def initialize(attributes)
       super
+      set_merchant_defined_fields(attributes)
       @type, @amount = attributes[:type].to_s, attributes[:amount].to_f
       @transaction_id = attributes[:transaction_id].to_i if attributes[:transaction_id]
       @customer_vault_id = attributes[:customer_vault_id].to_i if attributes[:customer_vault_id]
@@ -42,8 +46,9 @@ module NmiDirectPost
         end
       end
       _safe_params = safe_params
-      logger.info { "Sending Direct Post Transaction to NMI: #{_safe_params}" }
-      post([_safe_params, transaction_params].join('&'))
+      _merchant_defined_params = merchant_defined_params
+      logger.info { "Sending Direct Post Transaction to NMI: #{_safe_params} + #{_merchant_defined_params}" }
+      post([_safe_params, _merchant_defined_params, transaction_params].join('&'))
       valid?.tap { |_| reload if _ }
     end
 
@@ -92,77 +97,87 @@ module NmiDirectPost
     end
 
     private
-      def safe_params
-        generate_query_string(SAFE_PARAMS)
+    def set_merchant_defined_fields(args)
+      MERCHANT_DEFINED_FIELDS.each do |f|
+        instance_variable_set("@#{f.to_s}", args[f]) if args.has_key?(f) && args[f].present?
       end
+    end
 
-      def transaction_params
-        generate_query_string([AUTH_PARAMS, :transaction_id].flatten)
-      end
+    def safe_params
+      generate_query_string(SAFE_PARAMS)
+    end
 
-      def get(query)
-        hash = self.class.get(query)["transaction"]
-        hash = hash.keep_if { |v| v['transaction_id'].to_s == self.transaction_id.to_s }.first if hash.is_a?(Array)
-        raise TransactionNotFoundError, "No transaction found for TransactionID #{@transaction_id}" if hash.nil?
-        @auth_code = hash["authorization_code"]
-        @customer_vault_id = hash["customerid"].to_i
-        @avs_response = hash["avs_response"]
-        @condition = hash["condition"]
-        action = hash["action"]
-        action = action.last unless action.is_a?(Hash)
-        @amount = action["amount"].to_f
-        @type = action["action_type"]
-        @response = action["success"].to_i if action.key?("success")
-        @response_code = action["response_code"].to_i if action.key?("response_code")
-        @response_text = action["response_text"]
-      end
+    def merchant_defined_params
+      generate_query_string(MERCHANT_DEFINED_FIELDS)
+    end
 
-      def post(query)
-        response = self.class.post(query)
-        @response = response["response"].to_i if response.key?("response")
-        @response_code = response["response_code"].to_i if response.key?("response_code")
-        @response_text, @avs_response, @cvv_response = response["responsetext"], response["avsresponse"], response["cvvresponse"]
-        @dup_seconds, @order_id, @auth_code = response["dup_seconds"], response["orderid"], response["authcode"]
-        @transaction_id = response["transactionid"]
-      end
+    def transaction_params
+      generate_query_string([AUTH_PARAMS, :transaction_id].flatten)
+    end
 
-      def customer_vault_is_checking?
-        !customer_vault.blank? && customer_vault.checking?
-      end
+    def get(query)
+      hash = self.class.get(query)["transaction"]
+      hash = hash.keep_if { |v| v['transaction_id'].to_s == self.transaction_id.to_s }.first if hash.is_a?(Array)
+      raise TransactionNotFoundError, "No transaction found for TransactionID #{@transaction_id}" if hash.nil?
+      @auth_code = hash["authorization_code"]
+      @customer_vault_id = hash["customerid"].to_i
+      @avs_response = hash["avs_response"]
+      @condition = hash["condition"]
+      action = hash["action"]
+      action = action.last unless action.is_a?(Hash)
+      @amount = action["amount"].to_f
+      @type = action["action_type"]
+      @response = action["success"].to_i if action.key?("success")
+      @response_code = action["response_code"].to_i if action.key?("response_code")
+      @response_text = action["response_text"]
+    end
 
-      def finding_by_transaction_id?
-        !transaction_id.blank?
-      end
+    def post(query)
+      response = self.class.post(query)
+      @response = response["response"].to_i if response.key?("response")
+      @response_code = response["response_code"].to_i if response.key?("response_code")
+      @response_text, @avs_response, @cvv_response = response["responsetext"], response["avsresponse"], response["cvvresponse"]
+      @dup_seconds, @order_id, @auth_code = response["dup_seconds"], response["orderid"], response["authcode"]
+      @transaction_id = response["transactionid"]
+    end
 
-      def is_validate?
-        !finding_by_transaction_id? && ('validate' == type.to_s)
-      end
+    def customer_vault_is_checking?
+      !customer_vault.blank? && customer_vault.checking?
+    end
 
-      def is_sale?
-        !finding_by_transaction_id? && (['sale', ''].include?(type.to_s))
-      end
+    def finding_by_transaction_id?
+      !transaction_id.blank?
+    end
 
-      def is_auth?
-        !finding_by_transaction_id? && ('auth' == type.to_s)
-      end
+    def is_validate?
+      !finding_by_transaction_id? && ('validate' == type.to_s)
+    end
 
-      def is_void?
-        !customer_vault_is_checking? && ('void' == type.to_s)
-      end
+    def is_sale?
+      !finding_by_transaction_id? && (['sale', ''].include?(type.to_s))
+    end
 
-      def save_successful?
-        return if (success? || declined?)
-        self.errors.add(:response, response.to_s)
-        self.errors.add(:response_code, response_code.to_s)
-        self.errors.add(:response_text, response_text)
-      end
+    def is_auth?
+      !finding_by_transaction_id? && ('auth' == type.to_s)
+    end
 
-      def voidable_transaction?
-        self.errors.add(:type, "Void is only a valid action for a pending or unsettled authorization, or an unsettled sale") if (finding_by_transaction_id? && !['pending', 'pendingsettlement'].include?(condition)) unless condition.blank?
-      end
+    def is_void?
+      !customer_vault_is_checking? && ('void' == type.to_s)
+    end
 
-      def persisted?
-        self.errors.add(:type, "Void is only a valid action for a transaction that has already been sent to NMI") unless finding_by_transaction_id?
-      end
+    def save_successful?
+      return if (success? || declined?)
+      self.errors.add(:response, response.to_s)
+      self.errors.add(:response_code, response_code.to_s)
+      self.errors.add(:response_text, response_text)
+    end
+
+    def voidable_transaction?
+      self.errors.add(:type, "Void is only a valid action for a pending or unsettled authorization, or an unsettled sale") if (finding_by_transaction_id? && !['pending', 'pendingsettlement'].include?(condition)) unless condition.blank?
+    end
+
+    def persisted?
+      self.errors.add(:type, "Void is only a valid action for a transaction that has already been sent to NMI") unless finding_by_transaction_id?
+    end
   end
 end

@@ -20,6 +20,7 @@ module NmiDirectPost
     POST_URI = "https://secure.nmi.com/api/transact.php"
     GET_URI = "https://secure.nmi.com/api/query.php"
 
+    MERCHANT_DEFINED_FIELDS ||= 20.times.collect { |i| :"merchant_defined_field_#{i+1}" }
     AUTH_PARAMS = [:username, :password]
     attr_reader *AUTH_PARAMS
     attr_reader :response, :response_text, :response_code
