@@ -47,7 +47,7 @@ module NmiDirectPost
       end
       _safe_params = safe_params
       _merchant_defined_params = merchant_defined_params
-      logger.info { "Sending Direct Post Transaction to NMI: #{_safe_params} + #{_merchant_defined_params}" }
+      logger.info { strip_sensitive_from_string("Sending Direct Post Transaction to NMI: #{_safe_params} + #{_merchant_defined_params}") }
       post([_safe_params, _merchant_defined_params, transaction_params].join('&'))
       valid?.tap { |_| reload if _ }
     end
