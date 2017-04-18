@@ -11,14 +11,14 @@ module NmiDirectPost
       @logger = _
     end
 
-    def strip_sensitive_from_string(str)
-      str = str.gsub(/cc_number=[0-9]+/i, '|**FILTERED**|')
-      str = str.gsub(/cc_exp=[0-9]+/i, '|**FILTERED**|')
-      str = str.gsub(/cc_cvv=[0-9]+/i, '|**FILTERED**|')
-      str
-    rescue => e
-      'ERROR stripping out sensitive data'
-    end
+    #def strip_sensitive_from_string(str)
+    #  str = str.gsub(/cc_number=[0-9]+/i, '|**FILTERED**|')
+    #  str = str.gsub(/cc_exp=[0-9]+/i, '|**FILTERED**|')
+    #  str = str.gsub(/cc_cvv=[0-9]+/i, '|**FILTERED**|')
+    #  str
+    #rescue => e
+    #  'ERROR stripping out sensitive data'
+    #end
 
     private
     def logger_responds(logger)
