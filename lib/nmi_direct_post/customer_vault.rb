@@ -82,7 +82,7 @@ module NmiDirectPost
       end
       begin
         safe_params = customer_vault_instance_params
-        logger.debug { strip_sensitive_from_string("Loading NMI customer vault from customer_vault_id(#{customer_vault_id}) using query: #{safe_params}") }
+        #logger.debug { strip_sensitive_from_string("Loading NMI customer vault from customer_vault_id(#{customer_vault_id}) using query: #{safe_params}") }
         response = self.class.get(self.class.all_params(safe_params, self))["customer_vault"]
         raise CustomerVaultNotFoundError, "No record found for customer vault ID #{self.customer_vault_id}" if response.nil?
         attributes = response["customer"].with_indifferent_access
@@ -113,7 +113,7 @@ module NmiDirectPost
       begin
         @report_type = :customer_vault
         safe_params = generate_query_string(MERCHANT_DEFINED_FIELDS + [:last_name, :email, :report_type]) # These are the only fields you can use when looking up without a customer_vault_id
-        logger.info { strip_sensitive_from_string("Querying NMI customer vault: #{safe_params}") }
+        #logger.info { strip_sensitive_from_string("Querying NMI customer vault: #{safe_params}") }
         @customer_vault_id = self.class.get(self.class.all_params(safe_params, self))['customer_vault'][0]['customer_vault_id'] # This assumes there is only 1 result.
         # TODO: When there are multiple results, we don't know which one you want.  Maybe raise an error in that case?
         reload
@@ -145,7 +145,7 @@ module NmiDirectPost
       def all_ids
         @report_type = :customer_vault
         safe_params = generate_query_string([:report_type])
-        NmiDirectPost.logger.debug { strip_sensitive_from_string("Loading all NMI customer vaults using query: #{safe_params}") }
+        #NmiDirectPost.logger.debug { strip_sensitive_from_string("Loading all NMI customer vaults using query: #{safe_params}") }
         begin
           customers = get(all_params(safe_params))["customer_vault"]
         ensure
@@ -176,7 +176,7 @@ module NmiDirectPost
       end
 
       def post(safe_params)
-        logger.info { strip_sensitive_from_string("Sending Direct Post to NMI: #{safe_params}") }
+        #logger.info { strip_sensitive_from_string("Sending Direct Post to NMI: #{safe_params}") }
         response = self.class.post(self.class.all_params(safe_params, self))
         @response, @response_text, @response_code = response["response"].to_i, response["responsetext"], response["response_code"].to_i
         @customer_vault_id = response["customer_vault_id"].to_i if :add_customer == self.customer_vault
