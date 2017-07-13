@@ -61,7 +61,7 @@ module NmiDirectPost
       end
 
       def generate_query_string(attributes, target = self)
-        ((attributes.reject { |attr| target.__send__(attr).blank? }).collect { |attr| "#{attr}=#{Addressable::URI.escape(target.__send__(attr).to_s)}"}).join('&')
+        ((attributes.reject { |attr| target.__send__(attr).blank? }).collect { |attr| "#{attr}=#{URI.escape(target.__send__(attr).to_s)}"}).join('&')
       end
 
       def get(query)
