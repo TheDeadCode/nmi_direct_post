@@ -28,7 +28,14 @@ module NmiDirectPost
     attr_reader *READ_ONLY_ATTRIBUTES
     attr_reader :customer_vault_id, :customer_vault, :report_type
 
-    WHITELIST_ATTRIBUTES ||= [:username, :password, :id, :first_name, :last_name, :address_1, :address_2, :company, :city, :state, :postal_code, :country, :email, :phone, :fax, :cell_phone, :customertaxid, :website, :shipping_first_name, :shipping_last_name, :shipping_address_1, :shipping_address_2, :shipping_company, :shipping_city, :shipping_state, :shipping_postal_code, :shipping_country, :shipping_email, :shipping_carrier, :tracking_number, :shipping_date, :shipping, :cc_number, :cc_exp, :cc_issue_number, :check_account, :check_aba, :check_name, :account_holder_type, :account_type, :sec_code, :processor_id, :cc_bin, :cc_start_date] + MERCHANT_DEFINED_FIELDS
+    WHITELIST_ATTRIBUTES ||= [
+        :username, :password, :id, :first_name, :last_name, :address_1, :address_2, :company, :city, :state, :postal_code,
+        :country, :email, :phone, :fax, :cell_phone, :customertaxid, :website, :shipping_first_name, :shipping_last_name,
+        :shipping_address_1, :shipping_address_2, :shipping_company, :shipping_city, :shipping_state, :shipping_postal_code,
+        :shipping_country, :shipping_email, :shipping_carrier, :tracking_number, :shipping_date, :shipping, :cc_number,
+        :cc_exp, :cc_issue_number, :check_account, :check_aba, :check_name, :account_holder_type, :account_type, :sec_code,
+        :processor_id, :cc_bin, :cc_start_date, :created, :updated
+    ] + MERCHANT_DEFINED_FIELDS
     attr_accessor_with_tracking_of_changes *WHITELIST_ATTRIBUTES
 
     validate :billing_information_present?, :if => Proc.new { |record| :add_customer == record.customer_vault }
@@ -207,6 +214,7 @@ module NmiDirectPost
         end
         attributes.delete(:merchant_defined_field) unless attributes.key?(:merchant_defined_field) && attributes[:merchant_defined_field].any?
         @id = @id.to_i if @id
+        # TODO - figure out a better way to do this. The request shouldn't blow up because NMI adds a new attribute to their response.
         raise MassAssignmentSecurity::Error, "Cannot mass-assign the following attributes: #{attributes.keys.join(", ")}" unless attributes.empty?
       end
 
