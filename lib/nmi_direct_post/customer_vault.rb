@@ -34,7 +34,7 @@ module NmiDirectPost
         :shipping_address_1, :shipping_address_2, :shipping_company, :shipping_city, :shipping_state, :shipping_postal_code,
         :shipping_country, :shipping_email, :shipping_carrier, :tracking_number, :shipping_date, :shipping, :cc_number,
         :cc_exp, :cc_issue_number, :check_account, :check_aba, :check_name, :account_holder_type, :account_type, :sec_code,
-        :processor_id, :cc_bin, :cc_start_date, :created, :updated
+        :processor_id, :cc_bin, :cc_start_date, :created, :updated, :account_updated
     ] + MERCHANT_DEFINED_FIELDS
     attr_accessor_with_tracking_of_changes *WHITELIST_ATTRIBUTES
 
@@ -215,7 +215,7 @@ module NmiDirectPost
         attributes.delete(:merchant_defined_field) unless attributes.key?(:merchant_defined_field) && attributes[:merchant_defined_field].any?
         @id = @id.to_i if @id
         # TODO - figure out a better way to do this. The request shouldn't blow up because NMI adds a new attribute to their response.
-        raise MassAssignmentSecurity::Error, "Cannot mass-assign the following attributes: #{attributes.keys.join(", ")}" unless attributes.empty?
+        #raise MassAssignmentSecurity::Error, "Cannot mass-assign the following attributes: #{attributes.keys.join(", ")}" unless attributes.empty?
       end
 
       def billing_information_present?
