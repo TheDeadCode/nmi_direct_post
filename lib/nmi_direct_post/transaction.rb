@@ -9,7 +9,7 @@ module NmiDirectPost
   end
 
   class Transaction < Base
-    SAFE_PARAMS = [:customer_vault_id, :type, :amount]
+    SAFE_PARAMS = [:customer_vault_id, :type, :amount, :processor_id]
 
     attr_reader *SAFE_PARAMS
     attr_reader *MERCHANT_DEFINED_FIELDS
