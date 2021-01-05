@@ -35,6 +35,7 @@ module NmiDirectPost
       @type, @amount = attributes[:type].to_s, attributes[:amount].to_f
       @transaction_id = attributes[:transaction_id].to_i if attributes[:transaction_id]
       @customer_vault_id = attributes[:customer_vault_id].to_i if attributes[:customer_vault_id]
+      @processor_id = attributes[:processor_id] if attributes[:processor_id]
       reload if (finding_by_transaction_id? && self.valid?)
       @type, @amount = attributes[:type].to_s, attributes[:amount].to_f if ['void', 'capture'].include?(attributes[:type].to_s)
     end
